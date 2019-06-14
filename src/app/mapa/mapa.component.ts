@@ -9,6 +9,7 @@ import { WebsocketService } from '../services/websocket.service';
   styleUrls: ['./mapa.component.css']
 })
 export class MapaComponent implements OnInit {
+
   @ViewChild('map', { static: true }) mapElement: ElementRef;
   public mapa: google.maps.Map;
   constructor(private http: HttpClient, public ws: WebsocketService) { }
@@ -17,6 +18,7 @@ export class MapaComponent implements OnInit {
   public lugares: Lugar[] = [
 
   ];
+
   ngOnInit() {
 
     this.listarMapas();
@@ -86,15 +88,21 @@ export class MapaComponent implements OnInit {
     });
 
     google.maps.event.addDomListener(marker, 'dblclick', (cors) => {
+
       marker.setMap(null);
+      this.ws.emit('marcador-borrar', marcador.id);
+
+
     });
 
     google.maps.event.addDomListener(marker, 'drag', (cors) => {
       const nuevoMarcador = {
         lat: cors.latLng.lat(),
         lng: cors.latLng.lng(),
-        nombre: marcador.nombre
+        nombre: marcador.nombre,
+        id:  marcador.id
       }
+      this.ws.emit('marcador-mover', nuevoMarcador);
     });
   }
 
@@ -102,5 +110,27 @@ export class MapaComponent implements OnInit {
     this.ws.listen('marcador-nuevo').subscribe((res: Lugar) => {
       this.agregarMarcador(res);
     });
+
+    this.ws.listen('marcador-borrar').subscribe((id: string) => {
+
+      for (const i in this.marcadores) {
+        if (this.marcadores[i].getTitle() === id) {
+          this.marcadores[i].setMap(null);
+        }
+      }
+    });
+
+    this.ws.listen('marcador-mover').subscribe((marcador: Lugar) => {
+       for (const i in this.marcadores) {
+        if (this.marcadores[i].getTitle() === marcador.id) {
+          const latLng = new google.maps.LatLng(marcador.lat, marcador.lng);
+          this.marcadores[i].setPosition(latLng);
+          break;
+        }
+      }
+    });
+
   }
+
+
 }
